@@ -1,0 +1,67 @@
+version: '2'
+name: redis-server
+
+networks:
+  app-tier:
+    driver: bridge
+
+services:
+  redis:
+    image: 'bitnami/redis:latest'
+    environment:
+      - REDIS_REPLICATION_MODE=master
+      - REDIS_PASSWORD=YOURPASSWORD
+    networks:
+      - app-tier
+    ports:
+      - '6379:6379'
+    volumes:
+      - <you-local-redis-data-master>:/bitnami/redis/data
+
+  redis-slave1:
+    image: 'bitnami/redis:latest'
+    environment:
+      - REDIS_REPLICATION_MODE=slave
+      - REDIS_MASTER_HOST=redis
+      - REDIS_MASTER_PASSWORD=YOURPASSWORD
+      - REDIS_PASSWORD=YOURPASSWORD
+    ports:
+      - '6380:6379'
+    depends_on:
+      - redis
+    networks:
+      - app-tier
+    volumes:
+      - <you-local-redis-data-slave1>:/bitnami/redis/data
+  
+  redis-slave2:
+    image: 'bitnami/redis:latest'
+    environment:
+      - REDIS_REPLICATION_MODE=slave
+      - REDIS_MASTER_HOST=redis
+      - REDIS_MASTER_PASSWORD=YOURPASSWORD
+      - REDIS_PASSWORD=YOURPASSWORD
+    ports:
+      - '6381:6379'
+    depends_on:
+      - redis
+      - redis-slave1
+    networks:
+      - app-tier
+    volumes:
+      - <you-local-redis-data-slave2>:/bitnami/redis/data
+
+  redis-sentinel:
+    image: 'bitnami/redis-sentinel:latest'
+    environment:
+      - REDIS_MASTER_HOST=YOURMASTERIP
+      - REDIS_MASTER_PASSWORD=YOURPASSWORD
+      - REDIS_SENTINEL_PASSWORD=YOURPASSWORD
+    depends_on:
+      - redis
+      - redis-slave1
+      - redis-slave2
+    ports:
+      - '26379-26381:26379'
+    networks:
+      - app-tier
